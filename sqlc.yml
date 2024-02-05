@@ -1,0 +1,31 @@
+version: "2"
+sql:
+  # Sdn repo
+  - engine: "postgresql"
+    queries: "internal/repositories/sdn_queries/queries.sql"
+    schema: "migrations"
+    database:
+      uri: postgresql://postgres:password@localhost:5432/postgres
+    gen:
+      go:
+        package: "sdn_queries"
+        sql_package: "pgx/v5"
+        out: "internal/repositories/sdn_queries"
+        emit_json_tags: true
+        emit_interface: true
+        omit_unused_structs: true
+
+ # Upload attempts repo
+  - engine: "postgresql"
+    queries: "internal/repositories/upload_attempts_queries/queries.sql"
+    schema: "migrations"
+    database:
+      uri: postgresql://postgres:password@localhost:5432/postgres
+    gen:
+      go:
+        package: "upload_attempts_queries"
+        sql_package: "pgx/v5"
+        out: "internal/repositories/upload_attempts_queries"
+        emit_json_tags: true
+        emit_interface: true
+        omit_unused_structs: true
