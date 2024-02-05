@@ -7,5 +7,8 @@ build: bindir
 bindir:
 	mkdir -p ${BINDIR}
 
-run: build
+run: 
+	docker-compose up --force-recreate --build
+
+run-build: build
 	docker-compose up --force-recreate --build
