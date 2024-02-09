@@ -9,7 +9,7 @@ import (
 )
 
 func NewPgxpool(ctx context.Context, cfg *config.DBConfig, logger *zap.Logger) *pgxpool.Pool {
-	config, err := pgxpool.ParseConfig("postgresql://postgres:password@db_sdn:5432/postgres") // cfg.ConnString
+	config, err := pgxpool.ParseConfig(cfg.ConnString)
 
 	if err != nil {
 		logger.Fatal("unable to parse connection string", zap.Error(err))

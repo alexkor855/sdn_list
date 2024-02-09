@@ -9,6 +9,8 @@ services:
       - "8080:8080"
     depends_on:
       - db_sdn
+    env_file:
+      - .env
 
   db_sdn:
     image: postgres:14.10-alpine

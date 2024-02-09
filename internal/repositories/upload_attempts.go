@@ -58,7 +58,7 @@ func (r *UploadAttemptsRepository) Create(ctx context.Context) (int32, error) {
 func (r *UploadAttemptsRepository) UpdateSuccessAttempt(ctx context.Context, id int32, publishDate string) error {
 	queries := upload_attempts_queries.New(r.dbPool)
 
-	publishDateTime, _ := time.Parse("02/01/2006", publishDate)
+	publishDateTime, _ := time.Parse("01/02/2006", publishDate)
 
 	pgPublishDate := pgtype.Timestamp{}
 	pgPublishDate.Scan(publishDateTime)

@@ -45,13 +45,17 @@ func (r *SdnRepository) Save(ctx context.Context, person services.Person) (int, 
 	lastName := pgtype.Text{}
 	lastName.Scan(person.LastName)
 
-	_, err := queries.GetSdnByUidAndName(ctx, sdn_queries.GetSdnByUidAndNameParams{
+	sdnList, err := queries.GetSdnByUidAndName(ctx, sdn_queries.GetSdnByUidAndNameParams{
 		Uid:       int64(person.Uid),
 		FirstName: firstName,
 		LastName:  lastName,
 	})
 
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err == nil {
+		return int(sdnList.ID), nil
+	}
+
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return 0, err
 	}
 
@@ -60,7 +64,6 @@ func (r *SdnRepository) Save(ctx context.Context, person services.Person) (int, 
 		FirstName: firstName,
 		LastName:  lastName,
 	})
-	fmt.Print(" INSERTED ID=", id)
 
 	if err != nil {
 		return 0, err

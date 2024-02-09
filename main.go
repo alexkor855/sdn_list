@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"embed"
+	"fmt"
 	"io"
-	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 //go:embed migrations/*.sql
@@ -55,32 +58,53 @@ func main() {
 	uploadHandler := handlers.NewUploadHandler(uploadService, uploadingInProcess)
 	searchHandler := handlers.NewSearchHandler(searchService)
 
-	http.HandleFunc("/state", stateHandler.Handle)
-	http.HandleFunc("/update", uploadHandler.Handle)
-	http.HandleFunc("/get_names", searchHandler.Handle)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/state", stateHandler.Handle)
+	mux.HandleFunc("/update", uploadHandler.Handle)
+	mux.HandleFunc("/get_names", searchHandler.Handle)
 
 	migrationsUp := func(w http.ResponseWriter, _ *http.Request) {
 		goose.SetBaseFS(embedMigrations)
-	
+
 		if err := goose.SetDialect("postgres"); err != nil {
-			io.WriteString(w, "Ошибка при выполнении миграций. Установка диалекта postgres. " + err.Error())
+			io.WriteString(w, "Ошибка при выполнении миграций. Установка диалекта postgres. "+err.Error())
 			return
 		}
-	
+
 		db := stdlib.OpenDBFromPool(dbpool)
 		if err := goose.Up(db, "migrations"); err != nil {
-			io.WriteString(w, "Ошибка при выполнении миграций. " + err.Error())
+			io.WriteString(w, "Ошибка при выполнении миграций. "+err.Error())
 			return
 		}
 		if err := db.Close(); err != nil {
-			io.WriteString(w, "Ошибка при выполнении миграций. Закрытие соединения. " + err.Error())
+			io.WriteString(w, "Ошибка при выполнении миграций. Закрытие соединения. "+err.Error())
 			return
 		}
 
 		io.WriteString(w, "Миграции успешно применены")
 	}
 
-	http.HandleFunc("/migrations", migrationsUp)
+	mux.HandleFunc("/migrations", migrationsUp)
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	httpServer := &http.Server{
+		Addr:    fmt.Sprintf(":%s", config.Http.Port),
+		Handler: mux,
+		BaseContext: func(_ net.Listener) context.Context {
+			return ctx
+		},
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return httpServer.ListenAndServe()
+	})
+
+	g.Go(func() error {
+		<-ctx.Done()
+		return httpServer.Shutdown(context.Background())
+	})
+
+	if err := g.Wait(); err != nil {
+		logger.Fatal("app exit reason: %s \n", zap.Error(err))
+	}
 }
